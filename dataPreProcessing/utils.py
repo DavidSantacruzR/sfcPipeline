@@ -3,11 +3,12 @@
 # Data is approximately on a two month lag.
 
 from urllib import request as url_req
+from sqlalchemy import create_engine
+from datetime import date as dt
+import os
 import json
 import pandas as pd
 import calendar
-from datetime import date as dt
-import os
 
 
 class FetchDataFromOpenSource:
@@ -56,3 +57,33 @@ class GetLookupDate:
         self.day = "0" + str(self.day) if self.day < 10 else self.day
         lookup_date = str(self.year) + "-" + str(self.month) + "-" + str(self.day) + "T00:00:00.000"
         return lookup_date
+
+
+class DatabaseAdmin:
+    def __init__(self, engine: str, table_name: str, chunk_size: int, file, filepath: str):
+        self.engine = engine
+        self.table = table_name
+        self.chunk = chunk_size
+        self.file = file
+        self.filepath = filepath
+
+    def connect_to_the_database(self):
+
+        try:
+            conn = create_engine(self.engine).connect()
+            print('Successfully connected to', self.engine)  # Opens the connection to the database.
+            conn.close()
+            return conn  # Establish a connection to the database after testing.
+
+        except Exception as error:
+            print('It was not possible to connect to the server, revise:', error)
+
+    def load_data(self):
+        os.chdir(self.filepath)
+        data_to_update = pd.DataFrame(pd.read_csv(self.file))
+        data_to_update.to_sql(self.table, con=self.engine, if_exists='append', chunksize=self.chunk, index=False)
+
+    def close_connection(self):
+        pass  # Should close the session once called.
+
+
